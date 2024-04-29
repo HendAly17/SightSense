@@ -44,6 +44,7 @@ dependencies:
   cloud_firestore: ^4.8.1
   firebase_core: ^2.14.0
   permission_handler: ^10.3.0
+
   
 
 dev_dependencies:
