@@ -1,4 +1,3 @@
-// maps_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'loc_search.dart';
@@ -11,13 +10,12 @@ class MapsPage extends StatefulWidget {
   _MapsPageState createState() => _MapsPageState();
 }
 
-// _MapsPageState class
 class _MapsPageState extends State<MapsPage> {
   final TextEditingController _searchController = TextEditingController();
   late GoogleMapController _mapController;
   late LatLng _currentPosition =
       LatLng(31.2062, 29.9248); // Defaulted to Alexandria, Egypt
-  late LatLng _searchedPosition;
+  LatLng? _searchedPosition; // Change to nullable LatLng
   Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
 
@@ -75,15 +73,23 @@ class _MapsPageState extends State<MapsPage> {
   }
 
   void _handleSearch() async {
-    try {
-      final searchResult =
-          await _locationResult.searchLocation(_searchController.text);
-      _updateMapAndRoute(searchResult);
-    } catch (e) {
-      // Handle error
-      print('Error: $e');
-    }
+  try {
+    final searchResult = await _locationResult.searchLocationAndDrawRoute(
+      query: _searchController.text,
+      currentLocation: _currentPosition,
+      mapController: _mapController,
+      polylines: _polylines,
+      markers: _markers,
+    );
+    setState(() {
+      _searchedPosition = searchResult;
+    });
+  } catch (e) {
+    // Handle error
+    print('Error: $e');
   }
+}
+
 
   void _getCurrentLocation() async {
     await _requestLocationPermission(); // Request location permissions
@@ -109,24 +115,6 @@ class _MapsPageState extends State<MapsPage> {
       // Handle the case when locationData, latitude, or longitude is null
       print('Error: Location data or its latitude/longitude is null');
     }
-  }
-
-  void _updateMapAndRoute(LatLng searchResult) {
-    setState(() {
-      _searchedPosition = searchResult;
-      _markers.add(Marker(
-        markerId: MarkerId("searched_position"),
-        position: _searchedPosition,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ));
-    });
-    _mapController.animateCamera(CameraUpdate.newLatLng(_searchedPosition));
-    _locationResult.showRoute(
-      currentLocation: _currentPosition,
-      destination: _searchedPosition,
-      mapController: _mapController,
-      polylines: _polylines,
-    );
   }
 
   Future<void> _requestLocationPermission() async {

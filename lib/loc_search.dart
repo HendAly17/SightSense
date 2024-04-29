@@ -6,67 +6,94 @@ import 'dart:math';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // Import FlutterPolylinePoints
 
 class LocationResult {
-  static const String apiKey = 'AIzaSyBHUHiMgQO6m2gWxl2UsGssY7TivMAbYOY'; // Define your API key here
+  static const String apiKey = 'AIzaSyBHUHiMgQO6m2gWxl2UsGssY7TivMAbYOY'; // Replace with your API key
 
-  Future<LatLng> searchLocation(String query) async {
-    final places = GoogleMapsPlaces(apiKey: apiKey);
-    PlacesSearchResponse response = await places.searchByText(query);
-    if (response.isOkay && response.results.isNotEmpty) {
-      final place = response.results.first;
-      return LatLng(place.geometry!.location.lat, place.geometry!.location.lng);
-    } else {
-      throw Exception('Failed to retrieve location information');
-    }
-  }
+Future<LatLng> searchLocationAndDrawRoute({
+  required String query,
+  required LatLng currentLocation,
+  required GoogleMapController mapController,
+  required Set<Polyline> polylines,
+  required Set<Marker> markers,
+}) async {
+  final places = GoogleMapsPlaces(apiKey: apiKey);
+  PlacesSearchResponse response = await places.searchByText(query);
+  if (response.isOkay && response.results.isNotEmpty) {
+    final place = response.results.first;
+    final destination = LatLng(
+      place.geometry!.location.lat,
+      place.geometry!.location.lng,
+    );
 
-  Future<void> showRoute({
-    required LatLng currentLocation,
-    required LatLng destination,
-    required GoogleMapController mapController,
-    required Set<Polyline> polylines, // Set to hold the polylines
-  }) async {
     final directions = google_directions.GoogleMapsDirections(apiKey: apiKey);
-
     final directionsResponse = await directions.directions(
-      google_directions.Location(lat: currentLocation.latitude, lng: currentLocation.longitude),
-      google_directions.Location(lat: destination.latitude, lng: destination.longitude),
-      travelMode: google_directions.TravelMode.walking, // Use TravelMode.walking
+      google_directions.Location(
+        lat: currentLocation.latitude,
+        lng: currentLocation.longitude,
+      ),
+      google_directions.Location(
+        lat: destination.latitude,
+        lng: destination.longitude,
+      ),
+      travelMode: google_directions.TravelMode.walking,
     );
 
     if (directionsResponse.isOkay) {
       final routes = directionsResponse.routes;
       if (routes.isNotEmpty) {
-        final route = routes[0];
+        final route = routes.first;
         final polylinePoints = PolylinePoints();
-        List<PointLatLng> decodedPoints = polylinePoints.decodePolyline(route.overviewPolyline.points);
-        List<LatLng> polylineCoordinates = decodedPoints.map((point) => LatLng(point.latitude, point.longitude)).toList();
+        List<PointLatLng> decodedPoints =
+            polylinePoints.decodePolyline(route.overviewPolyline.points);
+        List<LatLng> polylineCoordinates = decodedPoints
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
 
-mapController.animateCamera(CameraUpdate.newLatLngBounds(
-  LatLngBounds(
-    southwest: LatLng(
-      min(currentLocation.latitude, destination.latitude), // Adjusted for southwest latitude
-      min(currentLocation.longitude, destination.longitude),
-    ),
-    northeast: LatLng(
-      max(currentLocation.latitude, destination.latitude), // Adjusted for northeast latitude
-      max(currentLocation.longitude, destination.longitude),
-    ),
-  ),
-  50, // padding
-));
+        mapController.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(
+                min(currentLocation.latitude, destination.latitude),
+                min(currentLocation.longitude, destination.longitude),
+              ),
+              northeast: LatLng(
+                max(currentLocation.latitude, destination.latitude),
+                max(currentLocation.longitude, destination.longitude),
+              ),
+            ),
+            50,
+          ),
+        );
 
-
-        // Clear existing polylines from the set
+        // Clear existing polylines and markers
         polylines.clear();
+        markers.clear();
 
         // Add new polyline to the set
-        polylines.add(Polyline(
-          polylineId: PolylineId('route'),
-          points: polylineCoordinates,
-          width: 5,
-          color: Colors.blue,
-        ));
+        polylines.add(
+          Polyline(
+            polylineId: PolylineId('route'),
+            points: polylineCoordinates,
+            width: 5,
+            color: Colors.blue,
+          ),
+        );
+
+        // Add marker for the searched location
+        markers.add(
+          Marker(
+            markerId: MarkerId('destination'),
+            position: destination,
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            ),
+          ),
+        );
+
+        // Return destination
+        return destination;
       }
     }
   }
+  throw Exception('Failed to retrieve location information');
+}
 }
