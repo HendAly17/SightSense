@@ -6,7 +6,7 @@ import 'dart:math';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // Import FlutterPolylinePoints
 
 class LocationResult {
-  static const String apiKey = 'AIzaSyBHUHiMgQO6m2gWxl2UsGssY7TivMAbYOY'; // Replace with your API key
+  static const String apiKey = ''; // Replace with your API key
 
 Future<LatLng> searchLocationAndDrawRoute({
   required String query,
